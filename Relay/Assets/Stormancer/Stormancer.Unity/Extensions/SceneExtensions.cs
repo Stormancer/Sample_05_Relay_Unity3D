@@ -158,6 +158,20 @@ namespace Stormancer
         }
 
         /// <summary>
+        /// Sends a remote procedure call with no input, expecting any number of answers.
+        /// </summary>
+        /// <typeparam name="TResponse">The expected type of the responses.</typeparam>
+        /// <param name="scene">The target scene.</param>
+        /// <param name="route">The target route.</param>
+        /// <param name="priority">The priority level used to send the request.</param>
+        /// <returns>An IObservable instance that provides return values for the request.</returns>
+        public static IObservable<TResponse> Rpc<TResponse>(this Scene scene, string route, PacketPriority priority = PacketPriority.MEDIUM_PRIORITY)
+        {
+            return scene.Rpc(route, s => { }, priority)
+                .Select(p => p.ReadObject<TResponse>());
+        }
+
+        /// <summary>
         /// Adds a procedure to the scene.
         /// </summary>
         /// <remarks>
@@ -210,6 +224,23 @@ namespace Stormancer
         }
 
         /// <summary>
+        /// Sends a remote procedure call using raw binary data as input, expecting exactly one answer
+        /// </summary>
+        /// <typeparam name="TResponse">The expected type of the responses.</typeparam>
+        /// <param name="scene">The target scene. </param>
+        /// <param name="route">The target route.</param>
+        /// <param name="writer">A writer method writing the data to send.</param>
+        /// <param name="priority">The priority level used to send the request.</param>
+        /// <returns>A task representing the remote procedure, whose return value is the raw answer to the remote procedure call.</returns>
+
+        public static Task<TResponse> RpcTask<TResponse>(this Scene scene, string route, Action<Stream> writer, PacketPriority priority = PacketPriority.MEDIUM_PRIORITY)
+        {
+            return scene.RpcTask(route, writer, priority)
+                .Then(result => result.ReadObject<TResponse>());
+        }
+
+
+        /// <summary>
         /// Sends a remote procedure call with an object as input, expecting exactly one answer
         /// </summary>
         /// <typeparam name="TData">The type of data to send</typeparam>
@@ -221,8 +252,7 @@ namespace Stormancer
         /// <returns>A task representing the remote procedure, whose return value is the deserialized value of the answer</returns>
         public static Task<TResponse> RpcTask<TData, TResponse>(this Scene scene, string route, TData data, PacketPriority priority = PacketPriority.MEDIUM_PRIORITY)
         {
-            return scene.RpcTask(route, s => scene.Host.Serializer().Serialize(data, s), priority)
-                .Then(result => result.ReadObject<TResponse>());
+            return scene.RpcTask<TResponse>(route, s => scene.Host.Serializer().Serialize(data, s), priority);
         }
     }
 }
